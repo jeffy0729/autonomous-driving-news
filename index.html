@@ -12,7 +12,7 @@
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
             background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
             min-height: 100vh;
             color: #2c3e50;
@@ -126,6 +126,7 @@
             display: flex;
             align-items: center;
             gap: 15px;
+            flex-wrap: wrap;
         }
         
         .news-source {
@@ -200,27 +201,27 @@
     <div class="container">
         <header>
             <h1>🚗 自动驾驶新闻汇总</h1>
-            <p class="subtitle">Autonomous Driving News • Robotaxi • Robotruck • Light Truck</p>
-            <p class="last-update" id="lastUpdate">Loading...</p>
+            <p class="subtitle">Robotaxi · Robotruck · 轻卡 | 每6小时更新 · 仅显示近5天新闻</p>
+            <p class="last-update" id="lastUpdate">加载中...</p>
         </header>
         
         <div class="categories" id="categories">
             <div class="category">
-                <h2 class="category-title"><span class="category-icon">🚕</span> Robotaxi</h2>
+                <h2 class="category-title"><span class="category-icon">🚕</span> Robotaxi 无人出租车</h2>
                 <ul class="news-list" id="robotaxi"></ul>
             </div>
             <div class="category">
-                <h2 class="category-title"><span class="category-icon">🚚</span> Robotruck</h2>
+                <h2 class="category-title"><span class="category-icon">🚚</span> Robotruck 无人卡车</h2>
                 <ul class="news-list" id="robotruck"></ul>
             </div>
             <div class="category">
-                <h2 class="category-title"><span class="category-icon">🛻</span> 轻卡 / Light Truck</h2>
+                <h2 class="category-title"><span class="category-icon">🛻</span> 轻卡 Light Truck</h2>
                 <ul class="news-list" id="lighttruck"></ul>
             </div>
         </div>
         
         <footer>
-            <p>数据来源: 新闻聚合 | 每6小时更新</p>
+            <p>数据来源: Tavily 新闻聚合 | 每6小时自动更新</p>
             <button class="refresh-btn" onclick="loadNews()">🔄 刷新数据</button>
         </footer>
     </div>
@@ -259,14 +260,14 @@
             
             for (const [key, query] of Object.entries(categories)) {
                 const list = document.getElementById(key);
-                list.innerHTML = '<li class="loading">Loading...</li>';
+                list.innerHTML = '<li class="loading">加载中...</li>';
                 
                 try {
                     const articles = await searchNews(query, key);
                     results[key] = articles;
                     renderNews(list, articles);
                 } catch (error) {
-                    list.innerHTML = `<li class="error">Error: ${error.message}</li>`;
+                    list.innerHTML = `<li class="error">加载失败: ${error.message}</li>`;
                 }
             }
             
@@ -301,7 +302,7 @@
             });
             
             if (!response.ok) {
-                throw new Error('Search API failed');
+                throw new Error('搜索接口请求失败');
             }
             
             const data = await response.json();
@@ -310,16 +311,15 @@
             // 过滤5天内的新闻并返回
             return (data.results || [])
                 .filter(item => {
-                    // 尝试解析日期，如果没有日期信息则保留
                     if (!item.published_date) return true;
                     const pubDate = new Date(item.published_date);
                     return pubDate.getTime() > fiveDaysAgo;
                 })
                 .slice(0, 10)
                 .map(item => ({
-                    title: item.title || 'Untitled',
+                    title: item.title || '无标题',
                     url: item.url || '',
-                    source: extractDomain(item.url) || 'Unknown',
+                    source: extractDomain(item.url) || '未知来源',
                     date: item.published_date || ''
                 }));
         }
@@ -330,41 +330,51 @@
                 const domain = new URL(url).hostname.replace('www.', '');
                 return domain;
             } catch {
-                return 'Unknown';
+                return '未知来源';
             }
         }
         
         // 渲染新闻列表
         function renderNews(container, articles) {
             if (!articles || articles.length === 0) {
-                container.innerHTML = '<li class="empty">No news found in the past 5 days</li>';
+                container.innerHTML = '<li class="empty">暂无近5天新闻</li>';
                 return;
             }
             
-            container.innerHTML = articles.map(article => `
+            container.innerHTML = articles.map(article => {
+                const dateStr = formatDateCN(article.date);
+                return `
                 <li class="news-item">
                     <a href="${article.url}" target="_blank" class="news-title">${article.title}</a>
                     <div class="news-meta">
                         <span class="news-source">${article.source}</span>
-                        ${article.date ? `<span class="news-date">${formatDate(article.date)}</span>` : ''}
+                        <span class="news-date">${dateStr}</span>
                     </div>
                 </li>
-            `).join('');
+            `}).join('');
         }
         
-        // 格式化日期
-        function formatDate(dateStr) {
+        // 格式化日期为中文
+        function formatDateCN(dateStr) {
             try {
+                if (!dateStr) return '';
                 const date = new Date(dateStr);
                 const now = new Date();
                 const diff = now - date;
                 const days = Math.floor(diff / (24 * 60 * 60 * 1000));
+                const hours = Math.floor(diff / (60 * 60 * 1000));
                 
-                if (days === 0) return 'Today';
-                if (days === 1) return 'Yesterday';
-                if (days <= 5) return `${days} days ago`;
+                if (hours < 1) return '刚刚';
+                if (hours < 24) return `${hours}小时前`;
+                if (days === 0) return '今天';
+                if (days === 1) return '昨天';
+                if (days <= 5) return `${days}天前`;
                 
-                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                return date.toLocaleDateString('zh-CN', { 
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric' 
+                });
             } catch {
                 return '';
             }
