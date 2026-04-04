@@ -200,7 +200,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>🚗 自动驾驶新闻汇总</h1>
+            <h1>🚗 自动驾驶新闻汇总</h5>
             <p class="subtitle">Robotaxi · Robotruck · 轻卡 | 每6小时更新 · 仅显示近5天新闻</p>
             <p class="last-update" id="lastUpdate">加载中...</p>
         </header>
@@ -222,14 +222,20 @@
         
         <footer>
             <p>数据来源: Tavily 新闻聚合 | 每6小时自动更新</p>
-            <button class="refresh-btn" onclick="loadNews()">🔄 刷新数据</button>
+            <button class="refresh-btn" onclick="forceRefresh()">🔄 刷新数据</button>
         </footer>
     </div>
 
     <script>
         const TAVILY_API_KEY = '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';
-        const CACHE_KEY = 'autonomous_news_cache';
+        const CACHE_KEY = 'autonomous_news_cache_v2';
         const CACHE_DURATION = 6 * 60 * 60 * 1000; // 6小时
+        
+        // 强制刷新（清除缓存）
+        function forceRefresh() {
+            localStorage.removeItem(CACHE_KEY);
+            loadNews();
+        }
         
         // 获取缓存或加载新数据
         async function getNews() {
@@ -241,19 +247,29 @@
                 if (now - data.timestamp < CACHE_DURATION) {
                     document.getElementById('lastUpdate').textContent = 
                         `最后更新: ${new Date(data.timestamp).toLocaleString('zh-CN')}`;
+                    console.log('Using cached data');
                     return data.news;
                 }
             }
             
+            console.log('Loading fresh data...');
             return await loadNews();
+        }
+        
+        // 计算5天前的日期
+        function getFiveDaysAgo() {
+            const date = new Date();
+            date.setDate(date.getDate() - 5);
+            return date.toISOString().split('T')[0];
         }
         
         // 加载新闻
         async function loadNews() {
+            const fiveDaysAgo = getFiveDaysAgo();
             const categories = {
                 robotaxi: 'robotaxi autonomous vehicle news',
-                robotruck: 'robotruck autonomous truck self-driving truck news',
-                lighttruck: 'autonomous light truck delivery vehicle news'
+                robotruck: 'robotruck autonomous trucking news',
+                lighttruck: 'autonomous light truck delivery van news'
             };
             
             const results = {};
@@ -263,10 +279,12 @@
                 list.innerHTML = '<li class="loading">加载中...</li>';
                 
                 try {
-                    const articles = await searchNews(query, key);
+                    const articles = await searchNews(query, key, fiveDaysAgo);
                     results[key] = articles;
                     renderNews(list, articles);
+                    console.log(`${key}: ${articles.length} articles`);
                 } catch (error) {
+                    console.error(`${key} error:`, error);
                     list.innerHTML = `<li class="error">加载失败: ${error.message}</li>`;
                 }
             }
@@ -284,7 +302,7 @@
         }
         
         // 使用Tavily搜索新闻
-        async function searchNews(query, category) {
+        async function searchNews(query, category, dateAfter) {
             const response = await fetch('https://api.tavily.com/search', {
                 method: 'POST',
                 headers: {
@@ -295,6 +313,7 @@
                     query: query,
                     search_depth: 'basic',
                     max_results: 15,
+                    date_after: dateAfter,  // 限制5天内
                     include_answer: false,
                     include_raw_content: false,
                     include_images: false
@@ -306,15 +325,10 @@
             }
             
             const data = await response.json();
-            const fiveDaysAgo = Date.now() - (5 * 24 * 60 * 60 * 1000);
+            console.log(`${category} raw results:`, data.results?.length || 0);
             
-            // 过滤5天内的新闻并返回
+            // 直接使用API返回的结果（已按date_after过滤）
             return (data.results || [])
-                .filter(item => {
-                    if (!item.published_date) return true;
-                    const pubDate = new Date(item.published_date);
-                    return pubDate.getTime() > fiveDaysAgo;
-                })
                 .slice(0, 10)
                 .map(item => ({
                     title: item.title || '无标题',
