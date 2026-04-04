@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自动驾驶新闻汇总 | Autonomous Driving News</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+            min-height: 100vh;
+            color: #2c3e50;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 300;
+            color: #1a1a2e;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+            letter-spacing: 1px;
+        }
+        
+        .last-update {
+            margin-top: 15px;
+            font-size: 0.8rem;
+            color: #95a5a6;
+        }
+        
+        .categories {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 50px;
+        }
+        
+        .category {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .category:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .category-title {
+            font-size: 1.4rem;
+            font-weight: 500;
+            color: #1a1a2e;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #ecf0f1;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .category-icon {
+            font-size: 1.5rem;
+        }
+        
+        .news-list {
+            list-style: none;
+        }
+        
+        .news-item {
+            padding: 15px 0;
+            border-bottom: 1px solid #ecf0f1;
+            transition: background-color 0.2s ease;
+        }
+        
+        .news-item:last-child {
+            border-bottom: none;
+        }
+        
+        .news-item:hover {
+            background-color: #f8f9fa;
+            margin: 0 -15px;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        
+        .news-title {
+            font-size: 1rem;
+            font-weight: 500;
+            color: #2c3e50;
+            text-decoration: none;
+            display: block;
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+        
+        .news-title:hover {
+            color: #3498db;
+        }
+        
+        .news-meta {
+            font-size: 0.8rem;
+            color: #95a5a6;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .news-source {
+            background: #ecf0f1;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+        }
+        
+        .news-date {
+            color: #7f8c8d;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+        }
+        
+        .error {
+            text-align: center;
+            padding: 20px;
+            background: #ffeaea;
+            color: #e74c3c;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        
+        .empty {
+            text-align: center;
+            padding: 20px;
+            color: #95a5a6;
+            font-style: italic;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 30px;
+            color: #7f8c8d;
+            font-size: 0.85rem;
+        }
+        
+        .refresh-btn {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 25px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.3s ease;
+        }
+        
+        .refresh-btn:hover {
+            background: #2980b9;
+        }
+        
+        @media (max-width: 768px) {
+            .categories {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚗 自动驾驶新闻汇总</h1>
+            <p class="subtitle">Autonomous Driving News • Robotaxi • Robotruck • Light Truck</p>
+            <p class="last-update" id="lastUpdate">Loading...</p>
+        </header>
+        
+        <div class="categories" id="categories">
+            <div class="category">
+                <h2 class="category-title"><span class="category-icon">🚕</span> Robotaxi</h2>
+                <ul class="news-list" id="robotaxi"></ul>
+            </div>
+            <div class="category">
+                <h2 class="category-title"><span class="category-icon">🚚</span> Robotruck</h2>
+                <ul class="news-list" id="robotruck"></ul>
+            </div>
+            <div class="category">
+                <h2 class="category-title"><span class="category-icon">🛻</span> 轻卡 / Light Truck</h2>
+                <ul class="news-list" id="lighttruck"></ul>
+            </div>
+        </div>
+        
+        <footer>
+            <p>数据来源: 新闻聚合 | 每6小时更新</p>
+            <button class="refresh-btn" onclick="loadNews()">🔄 刷新数据</button>
+        </footer>
+    </div>
+
+    <script>
+        const TAVILY_API_KEY = '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';
+        const CACHE_KEY = 'autonomous_news_cache';
+        const CACHE_DURATION = 6 * 60 * 60 * 1000; // 6小时
+        
+        // 获取缓存或加载新数据
+        async function getNews() {
+            const cached = localStorage.getItem(CACHE_KEY);
+            const now = Date.now();
+            
+            if (cached) {
+                const data = JSON.parse(cached);
+                if (now - data.timestamp < CACHE_DURATION) {
+                    document.getElementById('lastUpdate').textContent = 
+                        `最后更新: ${new Date(data.timestamp).toLocaleString('zh-CN')}`;
+                    return data.news;
+                }
+            }
+            
+            return await loadNews();
+        }
+        
+        // 加载新闻
+        async function loadNews() {
+            const categories = {
+                robotaxi: 'robotaxi autonomous vehicle news',
+                robotruck: 'robotruck autonomous truck self-driving truck news',
+                lighttruck: 'autonomous light truck delivery vehicle news'
+            };
+            
+            const results = {};
+            
+            for (const [key, query] of Object.entries(categories)) {
+                const list = document.getElementById(key);
+                list.innerHTML = '<li class="loading">Loading...</li>';
+                
+                try {
+                    const articles = await searchNews(query, key);
+                    results[key] = articles;
+                    renderNews(list, articles);
+                } catch (error) {
+                    list.innerHTML = `<li class="error">Error: ${error.message}</li>`;
+                }
+            }
+            
+            const now = Date.now();
+            localStorage.setItem(CACHE_KEY, JSON.stringify({
+                timestamp: now,
+                news: results
+            }));
+            
+            document.getElementById('lastUpdate').textContent = 
+                `最后更新: ${new Date(now).toLocaleString('zh-CN')}`;
+            
+            return results;
+        }
+        
+        // 使用Tavily搜索新闻
+        async function searchNews(query, category) {
+            const response = await fetch('https://api.tavily.com/search', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    api_key: TAVILY_API_KEY,
+                    query: query,
+                    search_depth: 'basic',
+                    max_results: 15,
+                    include_answer: false,
+                    include_raw_content: false,
+                    include_images: false
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Search API failed');
+            }
+            
+            const data = await response.json();
+            const fiveDaysAgo = Date.now() - (5 * 24 * 60 * 60 * 1000);
+            
+            // 过滤5天内的新闻并返回
+            return (data.results || [])
+                .filter(item => {
+                    // 尝试解析日期，如果没有日期信息则保留
+                    if (!item.published_date) return true;
+                    const pubDate = new Date(item.published_date);
+                    return pubDate.getTime() > fiveDaysAgo;
+                })
+                .slice(0, 10)
+                .map(item => ({
+                    title: item.title || 'Untitled',
+                    url: item.url || '',
+                    source: extractDomain(item.url) || 'Unknown',
+                    date: item.published_date || ''
+                }));
+        }
+        
+        // 提取域名
+        function extractDomain(url) {
+            try {
+                const domain = new URL(url).hostname.replace('www.', '');
+                return domain;
+            } catch {
+                return 'Unknown';
+            }
+        }
+        
+        // 渲染新闻列表
+        function renderNews(container, articles) {
+            if (!articles || articles.length === 0) {
+                container.innerHTML = '<li class="empty">No news found in the past 5 days</li>';
+                return;
+            }
+            
+            container.innerHTML = articles.map(article => `
+                <li class="news-item">
+                    <a href="${article.url}" target="_blank" class="news-title">${article.title}</a>
+                    <div class="news-meta">
+                        <span class="news-source">${article.source}</span>
+                        ${article.date ? `<span class="news-date">${formatDate(article.date)}</span>` : ''}
+                    </div>
+                </li>
+            `).join('');
+        }
+        
+        // 格式化日期
+        function formatDate(dateStr) {
+            try {
+                const date = new Date(dateStr);
+                const now = new Date();
+                const diff = now - date;
+                const days = Math.floor(diff / (24 * 60 * 60 * 1000));
+                
+                if (days === 0) return 'Today';
+                if (days === 1) return 'Yesterday';
+                if (days <= 5) return `${days} days ago`;
+                
+                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            } catch {
+                return '';
+            }
+        }
+        
+        // 页面加载时获取新闻
+        document.addEventListener('DOMContentLoaded', getNews);
+    </script>
+</body>
+</html>
